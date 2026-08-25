@@ -1,0 +1,21 @@
+{
+  "name": "ESP32 Persistent Crash Journal Dev",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": [
+        "ms-vscode.cpptools",
+        "espressif.esp-idf-extension"
+      ]
+    }
+  },
+  "runArgs": [
+    "--privileged",
+    "-v", "/dev:/dev"
+  ]
+}
