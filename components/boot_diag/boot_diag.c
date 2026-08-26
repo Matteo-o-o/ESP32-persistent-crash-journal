@@ -2,11 +2,17 @@
 #include <stdio.h>
 #include "esp_log.h"
 #include "esp_attr.h"
+#include "nvs_flash.h"
+#include "nvs.h"
 
 
 static const char *TAG = "BOOT_DIAG";
 
 #define BOOT_DIAG_MAGIC_NUMBER 0xDEADBEEF
+#define NVS_NAMESPACE "boot_diag"
+#define NVS_KEY_COUNTERS "counters"
+#define NVS_KEY_BOOTS    "boot_count"
+
 
 // Storage persistant (RTC Memory)
 RTC_NOINIT_ATTR static uint32_t s_magic_number;
@@ -40,7 +46,6 @@ const char* reset_reason_to_string(esp_reset_reason_t reason)
     }
 }
 
-// Analyse and update the variables
 // Analyse and update the variables
 static esp_err_t boot_diag_init(void)
 {
@@ -114,4 +119,38 @@ esp_err_t boot_diag_process(void)
     
     boot_diag_log();
     return ESP_OK;
+}
+
+
+// nvs init 
+static esp_err_t init_nvs_storage(void){
+    esp_err_t ret = nvs_flash_init();
+    if(ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND){ // NVS partition doesn't contain any empty pages OR NVS partition contains data in new format and cannot be recognized by this version of code
+        ESP_LOGW(TAG,"NVS error, reformatting parition");
+        ret = nvs_flash_erase();
+        if(ret != ESP_OK) return ret; // Fail erase
+        ret = nvs_flash_init();
+    }
+    return ret;
+}
+
+esp_err_t boot_diag_save_nvs(void){
+    nvs_handle_t nvs_handle;
+
+    // open namespace (Write/Read)
+    esp_err_t err = nvs_open(NVS_NAMESPACE,NVS_READWRITE,&nvs_handle);
+    if(err != ESP_OK){
+        ESP_LOGE(TAG,"Error opening handle NVS %s",esp_err_to_name(err));
+        return err;
+    }
+    // Write value
+    nvs_set_u32(nvs_handle,NVS_KEY_BOOTS,s_boot_count);
+    nvs_set_blob(nvs_handle, NVS_KEY_COUNTERS, &s_reset_counters, sizeof(reset_counters_t));
+
+    // Commit on NVS
+    err = nvs_commit(nvs_handle);
+
+    nvs_close(nvs_handle);
+    
+    return err;
 }
