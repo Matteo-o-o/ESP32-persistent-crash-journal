@@ -61,6 +61,9 @@ static bool reset_reason_is_crash(esp_reset_reason_t reason)
     }
 }
 
+static esp_err_t init_nvs_storage(void);
+esp_err_t boot_diag_save_nvs(void);
+
 // Analyse and update the boot/crash counters
 static esp_err_t boot_diag_init(void)
 {
@@ -71,6 +74,7 @@ static esp_err_t boot_diag_init(void)
 
     if (s_magic_number != BOOT_DIAG_MAGIC_NUMBER) {
         // COLD BOOT (RTC memory was not retained)
+        ESP_LOGW(TAG, ">>> COLD BOOT detected (RTC memory was cleared) <<<");
         s_magic_number = BOOT_DIAG_MAGIC_NUMBER;
         s_consecutive_crash_count = 0;
         s_last_reset_reason = current_reason;
@@ -216,4 +220,16 @@ esp_err_t boot_diag_get_snapshot(boot_diag_snapshot_t *out_snapshot)
     out_snapshot->reset_counters = s_reset_counters;
 
     return ESP_OK;
+}
+
+// Resets all crash/boot statistics, both in RTC RAM and in NVS.
+esp_err_t boot_diag_reset_counters(void)
+{
+    ESP_LOGW(TAG, "Resetting all boot/crash counters");
+
+    s_boot_count = 0;
+    s_consecutive_crash_count = 0;
+    s_reset_counters = (reset_counters_t){0};
+
+    return boot_diag_save_nvs();
 }
