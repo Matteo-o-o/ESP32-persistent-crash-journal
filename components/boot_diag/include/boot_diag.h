@@ -25,4 +25,6 @@ esp_err_t boot_diag_process(void);
 
 esp_err_t boot_diag_get_snapshot(boot_diag_snapshot_t *out_snapshot);
 
+esp_err_t boot_diag_reset_counters(void);
+
 #endif // BOOT_DIAG_H
